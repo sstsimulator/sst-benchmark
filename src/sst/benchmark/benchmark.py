@@ -34,7 +34,7 @@ def main(args):
   sst.setStatisticLoadLevel(7)
 
   # Determines where statistics should be sent.
-  sst.setStatisticOutput('sst.statOutputCSV')
+  sst.setStatisticOutput('sst.statOutputConsole')
 
   # Enables statistics on both workers.
   sst.enableAllStatisticsForComponentType('benchmark.Worker')

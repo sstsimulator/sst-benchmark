@@ -18,3 +18,4 @@ libtool
 tags
 .DS_Store
 *.csv
+output/
