@@ -27,47 +27,58 @@ def main(args):
   cpus_step = args.step
   cpus_list = [x for x in range(cpus_start, cpus_stop + 1)
                if x % cpus_step == 0]
-  for run in range(args.runs):
+
+  layouts = [(1024, 1), (512, 2), (256, 4), (128, 8), (64, 16), (32, 32),
+             (16, 64), (8, 128)]
+
+  for layout in layouts:
+    components = layout[0]
+    initial_events = layout[1]
     for cpus in cpus_list:
-      name = '{}_{}'.format(cpus, run)
-      ofile = os.path.join(args.odir, name + '.log')
-      cmd = 'sst -v -n {} {} -- 1000 -i 1 -c 100000'.format(cpus, args.app)
-      task = taskrun.ProcessTask(tm, name, cmd)
-      task.stdout_file = ofile
-      task.add_condition(taskrun.FileModificationCondition(
-        [], [ofile]))
+      for run in range(args.runs):
+        name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
+        ofile = os.path.join(args.odir, name + '.log')
+        cmd = 'sst -v -n {} {} -- {} -i {} -c 200000'.format(
+          cpus, args.app, components, initial_events)
+        task = taskrun.ProcessTask(tm, name, cmd)
+        task.stdout_file = ofile
+        task.add_condition(taskrun.FileModificationCondition(
+          [], [ofile]))
 
   tm.randomize()
   res = tm.run_tasks()
   if not res:
     return -1
 
-  data = {}
-  for run in range(args.runs):
+  data = []
+  for layout in layouts:
+    components = layout[0]
+    initial_events = layout[1]
+    layout_str = '{}x{}'.format(*layout)
+    data.append([])
     for cpus in cpus_list:
-      name = '{}_{}'.format(cpus, run)
-      ofile = os.path.join(args.odir, name + '.log')
-      rate = extract_rate(ofile)
-      print('{} -> {}'.format(name, rate))
-      if cpus not in data:
-        data[cpus] = 0
-      data[cpus] += rate
-  for cpus in cpus_list:
-    data[cpus] /= args.runs
+      rate_sum = 0
+      for run in range(args.runs):
+        name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
+        ofile = os.path.join(args.odir, name + '.log')
+        rate = extract_rate(ofile, components)
+        rate_sum += rate
+        print('{} -> {}'.format(name, rate))
+      data[-1].append(rate_sum / args.runs)
 
   print(data)
 
-  x = sorted(list(data.keys()))
-  y = [data[k] for k in x]
-  mlp = ssplot.MultilinePlot(plt, x, [y])
+  mlp = ssplot.MultilinePlot(plt, cpus_list, data)
   mlp.set_title('SST-Benchmark performance')
   mlp.set_xlabel('Number of threads')
   mlp.set_xmajor_ticks(len(cpus_list))
   mlp.set_ylabel('Events per second')
+  mlp.set_ymin(0)
+  mlp.set_data_labels(['{}x{}'.format(*layout) for layout in layouts])
   mlp.plot(os.path.join(args.odir, 'performance.png'))
 
 
-def extract_rate(filename):
+def extract_rate(filename, expected_components):
   sim_time = None
   event_count = 0
   worker_count = 0
@@ -79,7 +90,7 @@ def extract_rate(filename):
         worker_count += 1
         event_count += int(line.split()[12][0:-1])
   assert sim_time is not None
-  assert worker_count == 1000
+  assert worker_count == expected_components
   return event_count / sim_time
 
 if __name__ == '__main__':
