@@ -22,14 +22,14 @@ def main(args):
                            observers=[cob, vob],
                            failure_mode=taskrun.FailureMode.AGGRESSIVE_FAIL)
 
-  cpus_start = 1
-  cpus_stop = os.cpu_count()
-  cpus_step = args.step
-  cpus_list = [x for x in range(cpus_start, cpus_stop + 1)
-               if x % cpus_step == 0]
+  cpus_list = [x for x in range(args.start, args.stop+1, args.step)]
 
-  layouts = [(1024, 1), (512, 2), (256, 4), (128, 8), (64, 16), (32, 32),
-             (16, 64), (8, 128)]
+  layouts = [(1024, 1)]
+  while True:
+    if layouts[-1][0] <= args.stop:
+      break
+    layouts.append((layouts[-1][0] // 2, layouts[-1][1] * 2),)
+  print(layouts)
 
   for layout in layouts:
     components = layout[0]
@@ -38,7 +38,7 @@ def main(args):
       for run in range(args.runs):
         name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
         ofile = os.path.join(args.odir, name + '.log')
-        cmd = 'sst -v -n {} {} -- {} -i {} -c 200000'.format(
+        cmd = 'sst -v -n {} {} -- {} -i {} -r 1.0 -c 200000'.format(
           cpus, args.app, components, initial_events)
         task = taskrun.ProcessTask(tm, name, cmd)
         task.stdout_file = ofile
@@ -97,10 +97,11 @@ if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('app', help='App to be run by app')
   ap.add_argument('odir', help='Output directory')
+  ap.add_argument('start', type=int, help='starting cpus')
+  ap.add_argument('stop', type=int, help='stopping cpus')
+  ap.add_argument('step', type=int, help='cpus step')
   ap.add_argument('-r', '--runs', type=int, default=1,
                   help='Number of runs')
-  ap.add_argument('-s', '--step', type=int, default=4,
-                  help='Step size for number of cpus (threads)')
   ap.add_argument('-v', '--verbose', action='store_true',
                   help='Show task descriptions')
   args = ap.parse_args()

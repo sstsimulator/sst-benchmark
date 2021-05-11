@@ -38,3 +38,12 @@ $ bc -l <<< "100000 / 0.022400"
 ```
 
 This example shows a total execution speed of ~4.5M events per second.
+
+To run a full sweep of multithreaded simulations, run the sweep script:
+``` bash
+$ cd $HOME/scratch/src/sst-benchmark
+$ ./sweep.py src/sst/benchmark/benchmark.py output 1 `nproc` 1 -r 3 -v
+$ eog output/performance.png
+```
+
+TODO (nicmcd): Implement multi-process in sweep.py
