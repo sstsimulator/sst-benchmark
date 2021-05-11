@@ -56,7 +56,7 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
                  "%s should be connected on worker %s\n",
                  port_name.c_str(), getName().c_str());
       link = configureLink(
-          port_name, new Event::Handler<Worker, int>(
+          port_name, new SST::Event::Handler<Worker, int>(
               this, &Worker::handleEvent, port_num));
       if (!link) {
         output_.fatal(CALL_INFO, -1, "unable to configure link %u\n", port_num);
@@ -71,7 +71,7 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
                "%s should NOT be connected on worker %s\n",
                port_name.c_str(), getName().c_str());
     SST::Link* link = configureSelfLink(
-        port_name, "1ns", new Event::Handler<Worker, int>(
+        port_name, "1ns", new SST::Event::Handler<Worker, int>(
             this, &Worker::handleEvent, port_num));
     if (!link) {
       output_.fatal(CALL_INFO, -1, "unable to configure link %u\n", port_num);

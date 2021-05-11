@@ -19,6 +19,7 @@ namespace Benchmark {
 class Worker : public SST::Component {
  private:
   struct Event : public SST::Event {
+    Event() = default;
     ~Event() override = default;
     char payload;
     void serialize_order(SST::Core::Serialization::serializer& _serializer)
