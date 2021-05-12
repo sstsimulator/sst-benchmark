@@ -60,6 +60,7 @@ def main(args):
     if layouts[-1][0] <= args.stop:
       break
     layouts.append((layouts[-1][0] // 2, layouts[-1][1] * 2),)
+  layouts = [(128, 8)]
   print(layouts)
 
   for layout in layouts:
@@ -69,8 +70,15 @@ def main(args):
       for run in range(args.runs):
         name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
         ofile = os.path.join(args.odir, name + '.log')
-        cmd = 'sst -v -n {} {} -- {} -i {} -r 1.0 -c 200000'.format(
-          cpus, args.app, components, initial_events)
+        cmd = ''
+        if args.mode == 'threads':
+          cmd += 'sst -v -n {} '.format(cpus)
+        elif args.mode == 'processes':
+          cmd += 'mpirun -n {} sst -v '.format(cpus)
+        else:
+          assert False, 'programmer error :('
+        cmd += '{} -- {} -i {} -r 1.0 -c 200000'.format(
+          args.app, components, initial_events)
         task = taskrun.ProcessTask(tm, name, cmd)
         task.stdout_file = ofile
         task.add_condition(taskrun.FileModificationCondition(
@@ -119,7 +127,11 @@ def extract_rate(filename, expected_components):
         sim_time = float(line.split()[2])
       elif line.find('Count.u64') >= 0:
         worker_count += 1
-        event_count += int(line.split()[12][0:-1])
+        try:
+          event_count += int(line.split()[12][0:-1])
+        except ValueError as ex:
+          print(filename)
+          raise ex
   assert sim_time is not None
   assert worker_count == expected_components
   return event_count / sim_time
@@ -127,6 +139,8 @@ def extract_rate(filename, expected_components):
 if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('app', help='App to be run by app')
+  ap.add_argument('mode', choices=['threads', 'processes'],
+                  help='Mode of operations')
   ap.add_argument('odir', help='Output directory')
   ap.add_argument('start', type=int, help='starting cpus')
   ap.add_argument('stop', type=int, help='stopping cpus')
