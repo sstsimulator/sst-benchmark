@@ -35,8 +35,7 @@ namespace Benchmark {
 
 void Worker::Event::serialize_order(
     SST::Core::Serialization::serializer& _serializer) {
-  printf("serializing\n");
-  Event::serialize_order(_serializer);
+  SST::Event::serialize_order(_serializer);
   _serializer & payload;
 };
 
