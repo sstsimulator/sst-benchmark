@@ -64,7 +64,8 @@ def main(args):
   sst.setStatisticLoadLevel(7)
 
   # Determines where statistics should be sent.
-  sst.setStatisticOutput('sst.statOutputConsole')
+  sst.setStatisticOutput('sst.statOutputCSV')
+  sst.setStatisticOutputOption('filepath', args.stats_file)
 
   # Enables statistics on both workers.
   sst.enableAllStatisticsForComponentType('benchmark.Worker')
@@ -73,6 +74,8 @@ if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('num_workers', type=int, default=10,
                   help='Number of workers.')
+  ap.add_argument('stats_file', type=str,
+                  help='Output statistics file file name.')
   ap.add_argument('-i', '--initial_events', type=int,
                   help='Number of initial events per worker.')
   ap.add_argument('-s', '--stagger_events', type=bool,

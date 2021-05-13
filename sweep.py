@@ -32,6 +32,9 @@
 """
 
 import argparse
+import csv
+import json
+import glob
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -55,12 +58,11 @@ def main(args):
 
   cpus_list = [x for x in range(args.start, args.stop+1, args.step)]
 
-  layouts = [(1024, 1)]
+  layouts = [(128, 8)]#[(1024, 1)]
   while True:
     if layouts[-1][0] <= args.stop:
       break
     layouts.append((layouts[-1][0] // 2, layouts[-1][1] * 2),)
-  layouts = [(128, 8)]
   print(layouts)
 
   for layout in layouts:
@@ -69,7 +71,8 @@ def main(args):
     for cpus in cpus_list:
       for run in range(args.runs):
         name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
-        ofile = os.path.join(args.odir, name + '.log')
+        log_file = os.path.join(args.odir, name + '.log')
+        stats_file = os.path.join(args.odir, name + '.csv')
         cmd = ''
         if args.mode == 'threads':
           cmd += 'sst -v -n {} '.format(cpus)
@@ -77,12 +80,12 @@ def main(args):
           cmd += 'mpirun -n {} sst -v '.format(cpus)
         else:
           assert False, 'programmer error :('
-        cmd += '{} -- {} -i {} -r 1.0 -c 200000'.format(
-          args.app, components, initial_events)
+        cmd += '{} -- {} {} -i {} -r 1.0 -c 200000'.format(
+          args.app, components, stats_file, initial_events)
         task = taskrun.ProcessTask(tm, name, cmd)
-        task.stdout_file = ofile
+        task.stdout_file = log_file
         task.add_condition(taskrun.FileModificationCondition(
-          [], [ofile]))
+          [], [log_file]))
 
   tm.randomize()
   res = tm.run_tasks()
@@ -99,8 +102,9 @@ def main(args):
       rate_sum = 0
       for run in range(args.runs):
         name = '{}_{}_{}_{}'.format(components, initial_events, cpus, run)
-        ofile = os.path.join(args.odir, name + '.log')
-        rate = extract_rate(ofile, components)
+        log_file = os.path.join(args.odir, name + '.log')
+        stats_file = os.path.join(args.odir, name + '.csv')
+        rate = extract_rate(log_file, stats_file, components)
         rate_sum += rate
         print('{} -> {}'.format(name, rate))
       data[-1].append(rate_sum / args.runs)
@@ -109,7 +113,12 @@ def main(args):
 
   mlp = ssplot.MultilinePlot(plt, cpus_list, data)
   mlp.set_title('SST-Benchmark performance')
-  mlp.set_xlabel('Number of threads')
+  if args.mode == 'threads':
+    mlp.set_xlabel('Number of threads')
+  elif args.mode == 'processes':
+    mlp.set_xlabel('Number of processes')
+  else:
+    assert False, 'programmer error :('
   mlp.set_xmajor_ticks(len(cpus_list))
   mlp.set_ylabel('Events per second')
   mlp.set_ymin(0)
@@ -117,23 +126,30 @@ def main(args):
   mlp.plot(os.path.join(args.odir, 'performance.png'))
 
 
-def extract_rate(filename, expected_components):
+def extract_rate(log_file, stats_file, expected_components):
   sim_time = None
-  event_count = 0
-  worker_count = 0
-  with open(filename) as fd:
+  with open(log_file) as fd:
     for line in fd:
       if line.find('Simulation time:') == 0:
         sim_time = float(line.split()[2])
-      elif line.find('Count.u64') >= 0:
-        worker_count += 1
-        try:
-          event_count += int(line.split()[12][0:-1])
-        except ValueError as ex:
-          print(filename)
-          raise ex
-  assert sim_time is not None
-  assert worker_count == expected_components
+  assert sim_time is not None, log_file
+
+  ext_loc = stats_file.rfind('.')
+  assert ext_loc > 0, stats_file
+  stats_fmt = stats_file[0:ext_loc] + '*' + stats_file[ext_loc:]
+  event_count = 0
+  components = 0
+  for stats_file_2 in glob.glob(stats_fmt):
+    with open(stats_file_2) as fd:
+      try:
+        stats = csv.DictReader(fd)
+        for row in stats:
+          event_count += int(row[' Count.u64'])
+          components += 1
+      except Exception as ex:
+        print(stats_file_2)
+        raise ex
+  assert components == expected_components, stats_file
   return event_count / sim_time
 
 if __name__ == '__main__':
