@@ -100,9 +100,8 @@ class Worker : public SST::Component {
        "The count of events generated", "unitless", 1})
 
  private:
-  //Worker();  // For serialization only
-  //Worker(const Worker&) = delete;
-  //void operator=(const Worker&) = delete;
+  Worker(const Worker&) = delete;
+  void operator=(const Worker&) = delete;
 
   void sendNextEvent();
   virtual void handleEvent(SST::Event* _event, int _port_num);

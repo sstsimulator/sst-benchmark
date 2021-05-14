@@ -132,8 +132,6 @@ void Worker::finish() {
   output_.verbose(CALL_INFO, 1, 0, "Finish()\n");
 }
 
-//Worker::Worker() : SST::Component(-1) {}
-
 void Worker::sendNextEvent() {
   double rand = random_.nextUniform();
   bool remote = rand <= remote_probability_;
