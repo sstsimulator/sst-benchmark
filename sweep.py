@@ -110,6 +110,13 @@ def main(args):
       data[-1].append(rate_sum / args.runs)
 
   print(data)
+  data_labels = ['{}x{}'.format(*layout) for layout in layouts]
+
+  with open(os.path.join(args.odir, 'performance.csv'), 'w') as fd:
+    print('Benchmark,' + ','.join([str(x) for x in cpus_list]), file=fd)
+    for idx in range(len(data)):
+      print(data_labels[idx] + ',', file=fd, end='')
+      print(','.join([str(x) for x in data[idx]]), file=fd)
 
   mlp = ssplot.MultilinePlot(plt, cpus_list, data)
   mlp.set_title('SST-Benchmark performance')
@@ -122,7 +129,7 @@ def main(args):
   mlp.set_xmajor_ticks(len(cpus_list))
   mlp.set_ylabel('Events per second')
   mlp.set_ymin(0)
-  mlp.set_data_labels(['{}x{}'.format(*layout) for layout in layouts])
+  mlp.set_data_labels(data_labels)
   mlp.plot(os.path.join(args.odir, 'performance.png'))
 
 
