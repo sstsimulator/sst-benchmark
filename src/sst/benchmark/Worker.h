@@ -71,11 +71,17 @@ class Worker : public SST::Component {
       COMPONENT_CATEGORY_UNCATEGORIZED)
 
   SST_ELI_DOCUMENT_PORTS(
-        {"port_%(portnum)d",
-         "Links to self or other workers.",
-         {"benchmark.Worker"}})
+      {"port_%(portnum)d",
+       "Links to self or other workers.",
+       {"benchmark.Worker"}},
+      {"completion_port",
+       "Link to self for simulation completion.",
+       {"benchmark.Worker"}})
 
   SST_ELI_DOCUMENT_PARAMS(
+      {"verbosity",
+       "Level of verbosity.",
+       "0"},
       {"num_workers",
        "Number of total workers.",
        NULL},
@@ -105,6 +111,7 @@ class Worker : public SST::Component {
 
   void sendNextEvent();
   virtual void handleEvent(SST::Event* _event, int _port_num);
+  virtual void handleCompletion(SST::Event* _event);
 
   // Output
   SST::Output output_;
@@ -119,6 +126,7 @@ class Worker : public SST::Component {
 
   // Links
   std::vector<SST::Link*> links_;
+  SST::Link* completion_link_;
 
   // Random
   SST::RNG::MersenneRNG random_;

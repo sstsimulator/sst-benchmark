@@ -42,7 +42,8 @@ void Worker::Event::serialize_order(
 Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
     : SST::Component(_id) {
   // Configures output.
-  output_.init("[@t] Benchmark." + getName() + ": ", 0, 0,
+  uint32_t verbosity = _params.find<uint32_t>("verbosity", 0);
+  output_.init("[@t] Benchmark." + getName() + ": ", verbosity, 0,
                SST::Output::STDOUT);
 
   // Retrieves parameter values.
@@ -74,7 +75,7 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
   // Seeds the random number generator.
   random_.seed(12345678 + getId());
 
-  // Configures the links for all ports.
+  // Configures the links for all data ports.
   for (int port_num = 0; port_num < num_workers_; port_num++) {
     std::string port_name = "port_" + std::to_string(port_num);
     SST::Link* link = nullptr;
@@ -107,6 +108,19 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
   }
   sst_assert(links_.size() == num_workers_, CALL_INFO, -1, "ERROR\n");
 
+  // Configures the completion port
+  {
+    sst_assert(!isPortConnected("completion_port"), CALL_INFO, -1,
+               "completion port is already connected on worker %s\n",
+               getName().c_str());
+    completion_link_ = configureSelfLink(
+        "completion_port", std::to_string(num_cycles_ + 1) + "ns",
+        new SST::Event::Handler<Worker>(this, &Worker::handleCompletion));
+    if (!completion_link_) {
+      output_.fatal(CALL_INFO, -1, "unable to configure completion link\n");
+    }
+  }
+
   // Registers the statistics.
   event_count_ = registerStatistic<uint64_t>("event_count");
 
@@ -126,6 +140,7 @@ void Worker::setup() {
   for (int ev = 0; ev < initial_events_; ev++) {
     sendNextEvent();
   }
+  completion_link_->send(1, new Worker::Event());
 }
 
 void Worker::finish() {
@@ -162,12 +177,21 @@ void Worker::handleEvent(SST::Event* _event, int _port_num) {
     delete _event;
     if (getCurrentSimTime() < num_cycles_) {
       sendNextEvent();
-    } else {
-      primaryComponentOKToEndSim();
     }
   } else {
     output_.fatal(CALL_INFO, -1, "Received bad event type on port %u.\n",
                   _port_num);
+  }
+}
+
+void Worker::handleCompletion(SST::Event* _event) {
+  Worker::Event* event = dynamic_cast<Worker::Event*>(_event);
+  if (event) {
+    output_.verbose(CALL_INFO, 3, 0, "Completing @ ns=%lu.\n",
+                    getCurrentSimTimeNano());
+    primaryComponentOKToEndSim();
+  } else {
+    output_.fatal(CALL_INFO, -1, "Received bad completion event type.\n");
   }
 }
 

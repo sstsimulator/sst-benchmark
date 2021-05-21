@@ -39,6 +39,8 @@ def main(args):
   for worker_id in range(args.num_workers):
     worker = sst.Component('Worker_{}'.format(worker_id), 'benchmark.Worker')
     worker.addParam('num_workers', args.num_workers)
+    if args.verbosity != None:
+      worker.addParam('verbosity', args.verbosity)
     if args.initial_events != None:
       worker.addParam('initial_events', args.initial_events)
     if args.stagger_events != None:
@@ -85,6 +87,8 @@ if __name__ == '__main__':
   ap.add_argument('-r', '--remote_probability', type=float,
                   help='Probility of for each event to a remote event [0-1].')
   ap.add_argument('-c', '--num_cycles', type=int,
-                  help='Number of cycles to simulate')
+                  help='Number of cycles to simulate.')
+  ap.add_argument('-v', '--verbosity', type=int,
+                  help='Verbosit of workers.')
   args = ap.parse_args()
   main(args)
