@@ -58,7 +58,7 @@ def main(args):
 
   cpus_list = [x for x in range(args.start, args.stop+1, args.step)]
 
-  layouts = [(128, 8)]#[(1024, 1)]
+  layouts = [(1024, 1)]
   while True:
     if layouts[-1][0] <= args.stop:
       break
