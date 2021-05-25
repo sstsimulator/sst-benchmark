@@ -52,11 +52,6 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
   sst_assert(num_workers_ > 0, CALL_INFO, -1, "num_workers must be > 0\n");
   initial_events_ = _params.find<uint32_t>("initial_events", 1);
   output_.verbose(CALL_INFO, 2, 0, "initial_events=%u\n", initial_events_);
-  stagger_time_ = _params.find<bool>("stagger_time", false);
-  output_.verbose(CALL_INFO, 2, 0, "stagger_time=%u\n", stagger_time_);
-  look_ahead_ = _params.find<SST::Cycle_t>("look_ahead", 1);
-  output_.verbose(CALL_INFO, 2, 0, "look_ahead=%lu\n", look_ahead_);
-  sst_assert(look_ahead_ > 0, CALL_INFO, -1, "look_ahead must be > 0\n");
   remote_probability_ = _params.find<double>("remote_probability", 0.5);
   output_.verbose(CALL_INFO, 2, 0, "remote_probability=%f\n",
                   remote_probability_);
@@ -69,8 +64,8 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
                "remote_probability must be 0 with num_workers = 1\n");
   }
   num_cycles_ = _params.find<SST::Cycle_t>("num_cycles", 10000);
-  sst_assert(num_cycles_ >= look_ahead_, CALL_INFO, -1,
-             "num_cycles must be >= look_ahead\n");
+  sst_assert(num_cycles_ >= 1, CALL_INFO, -1,
+             "num_cycles must be >= 1\n");
 
   // Seeds the random number generator.
   random_.seed(12345678 + getId());

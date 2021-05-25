@@ -43,10 +43,6 @@ def main(args):
       worker.addParam('verbosity', args.verbosity)
     if args.initial_events != None:
       worker.addParam('initial_events', args.initial_events)
-    if args.stagger_events != None:
-      worker.addParam('stagger_events', args.stagger_events)
-    if args.look_ahead != None:
-      worker.addParam('look_ahead', args.look_ahead)
     if args.remote_probability != None:
       worker.addParam('remote_probability', args.remote_probability)
     if args.num_cycles != None:
@@ -80,10 +76,6 @@ if __name__ == '__main__':
                   help='Output statistics file file name.')
   ap.add_argument('-i', '--initial_events', type=int,
                   help='Number of initial events per worker.')
-  ap.add_argument('-s', '--stagger_events', type=bool,
-                  help='Enable staggered time execution.')
-  ap.add_argument('-l', '--look_ahead', type=int,
-                  help='Amount of event look ahead in cycles.')
   ap.add_argument('-r', '--remote_probability', type=float,
                   help='Probility of for each event to a remote event [0-1].')
   ap.add_argument('-c', '--num_cycles', type=int,

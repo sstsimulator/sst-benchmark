@@ -119,8 +119,6 @@ class Worker : public SST::Component {
   // Parameters
   uint32_t num_workers_;
   uint32_t initial_events_;
-  bool stagger_time_;
-  SST::Cycle_t look_ahead_;
   double remote_probability_;
   SST::Cycle_t num_cycles_;
 
