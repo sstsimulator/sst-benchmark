@@ -140,7 +140,7 @@ void Worker::setup() {
   for (int ev = 0; ev < initial_events_; ev++) {
     sendNextEvent();
   }
-  completion_link_->send(1, new Worker::Event());
+  completion_link_->send(1, nullptr);
 }
 
 void Worker::finish() {
@@ -185,8 +185,7 @@ void Worker::handleEvent(SST::Event* _event, int _port_num) {
 }
 
 void Worker::handleCompletion(SST::Event* _event) {
-  Worker::Event* event = dynamic_cast<Worker::Event*>(_event);
-  if (event) {
+  if (_event == nullptr) {
     output_.verbose(CALL_INFO, 3, 0, "Completing @ ns=%lu.\n",
                     getCurrentSimTimeNano());
     primaryComponentOKToEndSim();
