@@ -60,10 +60,17 @@ def main(args):
 
   layouts = [(1024, 1)]
   while True:
-    if layouts[-1][0] <= args.stop:
+    if layouts[-1][0] <= os.cpu_count():
       break
     layouts.append((layouts[-1][0] // 2, layouts[-1][1] * 2),)
   print(layouts)
+
+  if args.topo == 'all-to-all':
+    num_cycles = 200000
+  elif args.topo == 'ring':
+    num_cycles = 500000
+  else:
+    assert False
 
   for layout in layouts:
     components = layout[0]
@@ -80,8 +87,9 @@ def main(args):
           cmd += 'mpirun -n {} sst -v '.format(cpus)
         else:
           assert False, 'programmer error :('
-        cmd += '{} -- {} {} -i {} -r 1.0 -c 200000'.format(
-          args.app, components, stats_file, initial_events)
+        cmd += '{} -- {} {} {} -i {} -r 1.0 -c {}'.format(
+          args.app, components, args.topo, stats_file, initial_events,
+          num_cycles)
         task = taskrun.ProcessTask(tm, name, cmd)
         task.stdout_file = log_file
         task.add_condition(taskrun.FileModificationCondition(
@@ -119,7 +127,7 @@ def main(args):
       print(','.join([str(x) for x in data[idx]]), file=fd)
 
   mlp = ssplot.MultilinePlot(plt, cpus_list, data)
-  mlp.set_title('SST-Benchmark performance')
+  mlp.set_title('SST-Benchmark Performance ({})'.format(args.topo))
   if args.mode == 'threads':
     mlp.set_xlabel('Number of threads')
   elif args.mode == 'processes':
@@ -162,6 +170,7 @@ def extract_rate(log_file, stats_file, expected_components):
 if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('app', help='App to be run by app')
+  ap.add_argument('topo', type=str, help='model topology')
   ap.add_argument('mode', choices=['threads', 'processes'],
                   help='Mode of operations')
   ap.add_argument('odir', help='Output directory')

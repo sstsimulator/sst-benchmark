@@ -47,9 +47,12 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
                SST::Output::STDOUT);
 
   // Retrieves parameter values.
-  num_workers_ = _params.find<uint32_t>("num_workers");
-  output_.verbose(CALL_INFO, 2, 0, "num_workers=%u\n", num_workers_);
-  sst_assert(num_workers_ > 0, CALL_INFO, -1, "num_workers must be > 0\n");
+  num_peers_ = _params.find<uint32_t>("num_peers");
+  output_.verbose(CALL_INFO, 2, 0, "num_peers=%u\n", num_peers_);
+  tx_peers_ = _params.find<uint32_t>("tx_peers");
+  output_.verbose(CALL_INFO, 2, 0, "tx_peers=%u\n", tx_peers_);
+  sst_assert(num_peers_ >= tx_peers_, CALL_INFO, -1,
+             "num_peers_ must be >= tx_peers_\n");
   initial_events_ = _params.find<uint32_t>("initial_events", 1);
   output_.verbose(CALL_INFO, 2, 0, "initial_events=%u\n", initial_events_);
   remote_probability_ = _params.find<double>("remote_probability", 0.5);
@@ -59,9 +62,9 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
              "remote_probability must be >= 0\n");
   sst_assert(remote_probability_ <= 1, CALL_INFO, -1,
              "remote_probability must be <= 1\n");
-  if (num_workers_ == 1) {
+  if (tx_peers_ == 0) {
     sst_assert(remote_probability_ == 0, CALL_INFO, -1,
-               "remote_probability must be 0 with num_workers = 1\n");
+               "remote_probability must be 0 with num_peers = 0\n");
   }
   num_cycles_ = _params.find<SST::Cycle_t>("num_cycles", 10000);
   sst_assert(num_cycles_ >= 1, CALL_INFO, -1,
@@ -71,14 +74,12 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
   random_.seed(12345678 + getId());
 
   // Configures the links for all data ports.
-  for (int port_num = 0; port_num < num_workers_; port_num++) {
-    std::string port_name = "port_" + std::to_string(port_num);
-    SST::Link* link = nullptr;
-    if (port_num != _id) {
-      sst_assert(isPortConnected(port_name), CALL_INFO, -1,
-                 "%s should be connected on worker %s\n",
-                 port_name.c_str(), getName().c_str());
-      link = configureLink(
+  {
+    std::string port_name;
+    for (int port_num = 0;
+         isPortConnected(port_name = "port_" + std::to_string(port_num));
+         port_num++) {
+      SST::Link* link = configureLink(
           port_name, new SST::Event::Handler<Worker, int>(
               this, &Worker::handleEvent, port_num));
       if (!link) {
@@ -88,7 +89,7 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
     }
   }
   {
-    int port_num = getId();
+    int port_num = links_.size();
     std::string port_name = "port_" + std::to_string(port_num);
     sst_assert(!isPortConnected(port_name), CALL_INFO, -1,
                "%s should NOT be connected on worker %s\n",
@@ -101,7 +102,7 @@ Worker::Worker(SST::ComponentId_t _id, SST::Params& _params)
     }
     links_.push_back(link);
   }
-  sst_assert(links_.size() == num_workers_, CALL_INFO, -1, "ERROR\n");
+  sst_assert(links_.size() == num_peers_ + 1, CALL_INFO, -1, "ERROR\n");
 
   // Configures the completion port
   {
@@ -147,9 +148,9 @@ void Worker::sendNextEvent() {
   bool remote = rand <= remote_probability_;
   uint64_t link_index;
   if (remote) {
-    link_index = random_.generateNextUInt64() % (num_workers_ - 1);
+    link_index = random_.generateNextUInt64() % tx_peers_;
   } else {
-    link_index = num_workers_ - 1;
+    link_index = num_peers_;
   }
   SST::Link* link = links_.at(link_index);
   Worker::Event* event = new Worker::Event();

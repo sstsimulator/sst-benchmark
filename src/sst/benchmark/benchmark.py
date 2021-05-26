@@ -34,11 +34,23 @@ import sst
 def main(args):
   print('\nStarting SST benchmark')
 
+  # Determines the numbers of peers based on topology.
+  if args.topology == 'all-to-all':
+    num_peers = args.num_workers - 1
+    tx_peers = num_peers
+  elif args.topology == 'ring':
+    assert args.num_workers >= 2, 'Ring requires >= 2 workers'
+    num_peers = 2
+    tx_peers = 1
+  else:
+    assert False, 'Programmer Error :('
+
   # Makes workers and sets parameters.
   workers = []
   for worker_id in range(args.num_workers):
     worker = sst.Component('Worker_{}'.format(worker_id), 'benchmark.Worker')
-    worker.addParam('num_workers', args.num_workers)
+    worker.addParam('num_peers', num_peers)
+    worker.addParam('tx_peers', tx_peers)
     if args.verbosity != None:
       worker.addParam('verbosity', args.verbosity)
     if args.initial_events != None:
@@ -49,14 +61,29 @@ def main(args):
       worker.addParam('num_cycles', args.num_cycles)
     workers.append(worker)
 
-  # Connects all workers via links.
-  for worker_a in range(args.num_workers):
-    for worker_b in range(worker_a, args.num_workers):
+  # Connects workers via links.
+  if args.topology == 'all-to-all':
+    # Every worker connects to every other worker.
+    ports = [0] * args.num_workers
+    for worker_a in range(args.num_workers):
+      for worker_b in range(worker_a, args.num_workers):
+        link_name = 'link_{}_{}'.format(worker_a, worker_b)
+        if worker_a != worker_b:
+          link = sst.Link(link_name, '1ns')
+          link.connect((workers[worker_a], 'port_{}'.format(ports[worker_a])),
+                       (workers[worker_b], 'port_{}'.format(ports[worker_b])))
+          ports[worker_a] += 1
+          ports[worker_b] += 1
+  elif args.topology == 'ring':
+    # Every worker connects to right and left workers.
+    for worker_a in range(args.num_workers):
+      worker_b = (worker_a + 1) % args.num_workers
       link_name = 'link_{}_{}'.format(worker_a, worker_b)
-      if worker_a != worker_b:  # TODO(nicmcd): remove 'if' once self-links work
-        link = sst.Link(link_name, '1ns')
-        link.connect((workers[worker_a], 'port_{}'.format(worker_b)),
-                     (workers[worker_b], 'port_{}'.format(worker_a)))
+      link = sst.Link(link_name, '1ns')
+      link.connect((workers[worker_a], 'port_{}'.format(0)),
+                   (workers[worker_b], 'port_{}'.format(1)))
+  else:
+    assert False, 'Programmer Error :('
 
   # Limits the verbosity of statistics to any with a load level from 0-7.
   sst.setStatisticLoadLevel(7)
@@ -72,6 +99,8 @@ if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('num_workers', type=int, default=10,
                   help='Number of workers.')
+  ap.add_argument('topology', type=str, choices=['all-to-all', 'ring'],
+                  help='Topology of worker connections.')
   ap.add_argument('stats_file', type=str,
                   help='Output statistics file file name.')
   ap.add_argument('-i', '--initial_events', type=int,

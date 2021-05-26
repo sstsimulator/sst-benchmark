@@ -82,17 +82,14 @@ class Worker : public SST::Component {
       {"verbosity",
        "Level of verbosity.",
        "0"},
-      {"num_workers",
-       "Number of total workers.",
+      {"num_peers",
+       "Number of workers this component connects to.",
+       NULL},
+      {"tx_peers",
+       "Number of workers this component sends to.",
        NULL},
       {"initial_events",
        "Number of initial events created by this worker.",
-       "1"},
-      {"stagger_time",
-       "Enable staggered time execution.",
-       "false"},
-      {"look_ahead",
-       "Amount of event look ahead measured in cycles.",
        "1"},
       {"remote_probability",
        "Probility of for each event to a remote event [0-1].",
@@ -117,7 +114,8 @@ class Worker : public SST::Component {
   SST::Output output_;
 
   // Parameters
-  uint32_t num_workers_;
+  uint32_t num_peers_;
+  uint32_t tx_peers_;
   uint32_t initial_events_;
   double remote_probability_;
   SST::Cycle_t num_cycles_;
