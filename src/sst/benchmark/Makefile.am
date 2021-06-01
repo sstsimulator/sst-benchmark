@@ -12,9 +12,11 @@ libbenchmark_la_SOURCES = \
 	Worker.h \
 	Worker.cc
 
-EXTRA_DIST = \
-    README \
+dist_bin_SCRIPTS = \
     benchmark.py
+
+EXTRA_DIST = \
+    README
 
 libbenchmark_la_LDFLAGS = -module -avoid-version
 
