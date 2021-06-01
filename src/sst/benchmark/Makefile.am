@@ -3,7 +3,8 @@
 #
 
 AM_CPPFLAGS = \
-	$(MPI_CPPFLAGS)
+	$(MPI_CPPFLAGS) \
+	-I $(abs_top_srcdir)/src/
 
 compdir = $(pkglibdir)
 comp_LTLIBRARIES = libbenchmark.la
