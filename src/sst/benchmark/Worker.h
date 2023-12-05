@@ -49,9 +49,9 @@ class Worker : public SST::Component {
   struct Event : public SST::Event {
     Event() = default;
     ~Event() override = default;
-    char payload;
-    void serialize_order(SST::Core::Serialization::serializer& _serializer)
-        override;
+    double time;
+    uint32_t count;
+    void serialize_order(SST::Core::Serialization::serializer& _serializer) override;
     ImplementSerializable(SST::Benchmark::Worker::Event);
   };
 
@@ -60,6 +60,7 @@ class Worker : public SST::Component {
   ~Worker() override;
 
   void setup() override;
+  void complete(unsigned int phase) override;
   void finish() override;
 
   SST_ELI_REGISTER_COMPONENT(
@@ -82,6 +83,9 @@ class Worker : public SST::Component {
       {"verbosity",
        "Level of verbosity.",
        "0"},
+      {"worker_id",
+       "ID of worker",
+       NULL},
       {"num_peers",
        "Number of workers this component connects to.",
        NULL},
@@ -114,11 +118,18 @@ class Worker : public SST::Component {
   SST::Output output_;
 
   // Parameters
+  uint32_t worker_id_;
   uint32_t num_peers_;
   uint32_t tx_peers_;
   uint32_t initial_events_;
   double remote_probability_;
   SST::Cycle_t num_cycles_;
+
+  // Variables to enable printing of event rates
+  double event_rate_ = 0.0;
+  uint32_t num_events_ = 0;
+  uint32_t total_events_ = 0;
+  bool print_rate_ = false; /** Set to true if rate aggregation is successful */
 
   // Links
   std::vector<SST::Link*> links_;

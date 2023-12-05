@@ -51,6 +51,7 @@ def main(args):
     worker = sst.Component('Worker_{}'.format(worker_id), 'benchmark.Worker')
     worker.addParam('num_peers', num_peers)
     worker.addParam('tx_peers', tx_peers)
+    worker.addParam('worker_id', worker_id)
     if args.verbosity != None:
       worker.addParam('verbosity', args.verbosity)
     if args.initial_events != None:
