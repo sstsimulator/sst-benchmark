@@ -4,6 +4,7 @@
 *.pyc
 .*.swp
 .libs/
+.cache/
 .deps/
 .dirstamp
 .ignore
